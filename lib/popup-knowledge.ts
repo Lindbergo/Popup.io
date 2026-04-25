@@ -25,7 +25,11 @@ export function getPopupTechniques(): string {
 
   const sections = order.map((filename) => {
     const filePath = path.join(dir, filename);
-    return fs.readFileSync(filePath, "utf-8");
+    try {
+      return fs.readFileSync(filePath, "utf-8");
+    } catch {
+      throw new Error(`Missing knowledge file: knowledge/techniques/${filename}. Check the file exists in the repo.`);
+    }
   });
 
   _cachedKnowledge = sections.join("\n\n---\n\n");

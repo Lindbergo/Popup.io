@@ -48,7 +48,17 @@ Output ONLY a single valid JSON object — no markdown fences, no explanation te
 
 export function parseCardDesign(raw: string): CardDesign {
   const cleaned = raw.trim().replace(/^```json\n?/, "").replace(/\n?```$/, "");
-  return JSON.parse(cleaned) as CardDesign;
+  if (!cleaned) throw new Error("AI returned an empty response — try again.");
+  let parsed: CardDesign;
+  try {
+    parsed = JSON.parse(cleaned) as CardDesign;
+  } catch {
+    throw new Error("AI returned a response that could not be parsed. Try rephrasing your description.");
+  }
+  if (!parsed.title || !parsed.steps || !parsed.materials) {
+    throw new Error("AI returned an incomplete card design. Try again.");
+  }
+  return parsed;
 }
 
 export function buildUserText(description: string, difficulty?: string): string {

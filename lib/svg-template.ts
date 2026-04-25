@@ -96,8 +96,8 @@ export function generateSVG(design: CardDesign): string {
   const pieces = design.template_pieces ?? [];
 
   // Lay out pieces in a grid
-  const colWidth = Math.max(...pieces.map((p) => p.width), 100) + PIECE_GAP + 30;
-  const colCount = Math.min(3, pieces.length);
+  const colWidth = (pieces.length > 0 ? Math.max(...pieces.map((p) => p.width)) : 100) + PIECE_GAP + 30;
+  const colCount = Math.max(1, Math.min(3, pieces.length));
 
   const positions: { x: number; y: number }[] = [];
   let rowY = MARGIN + 30;
@@ -124,7 +124,7 @@ export function generateSVG(design: CardDesign): string {
   let content = "";
 
   // Title
-  content += `<text x="${svgWidth / 2}" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="${COLORS.label}">${design.title} — Print Template</text>`;
+  content += `<text x="${svgWidth / 2}" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="${COLORS.label}">${design.title ?? "Card"} — Print Template</text>`;
   content += `<text x="${svgWidth / 2}" y="36" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#718096">Print at 100% scale. 1mm = 1mm. Do not scale to fit.</text>`;
 
   // Pieces

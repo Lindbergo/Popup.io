@@ -100,11 +100,17 @@ export default function CardInput({ onGenerate, loading }: CardInputProps) {
     const reader = new FileReader();
     reader.onload = (ev) => {
       const result = ev.target?.result as string;
-      const [header, data] = result.split(",");
+      const commaIdx = result.indexOf(",");
+      if (commaIdx === -1) return;
+      const header = result.slice(0, commaIdx);
+      const data = result.slice(commaIdx + 1);
       const mime = header.match(/data:([^;]+)/)?.[1] ?? "image/jpeg";
       setImageBase64(data);
       setImageMimeType(mime);
       setImagePreview(result);
+    };
+    reader.onerror = () => {
+      removeImage();
     };
     reader.readAsDataURL(file);
   }
