@@ -78,6 +78,41 @@ describe("getPopupTechniques (missing file)", () => {
   });
 });
 
+describe("getPopupTechniques (keyword selection)", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("includes floating-layer when description mentions 'float'", async () => {
+    const { getPopupTechniques } = await import("@/lib/popup-knowledge");
+    const result = getPopupTechniques("a card with a floating cloud above the scene");
+    expect(result).toContain("Floating Layer");
+  });
+
+  it("excludes floating-layer content when description has no matching keywords", async () => {
+    const { getPopupTechniques } = await import("@/lib/popup-knowledge");
+    const result = getPopupTechniques("a birthday table with two chairs");
+    // "Three-Pedestal Lift" is unique to floating-layer.md; index.md only has "Floating Layer"
+    expect(result).not.toContain("Three-Pedestal Lift");
+  });
+
+  it("always includes core files regardless of description", async () => {
+    const { getPopupTechniques } = await import("@/lib/popup-knowledge");
+    const result = getPopupTechniques("simple card");
+    expect(result).toContain("V-Fold");
+    expect(result).toContain("Box Fold");
+    expect(result).toContain("Clearance Rules");
+    expect(result).toContain("Character Shapes");
+  });
+
+  it("with description is shorter than without description", async () => {
+    const { getPopupTechniques } = await import("@/lib/popup-knowledge");
+    const full = getPopupTechniques();
+    const filtered = getPopupTechniques("a birthday table with two chairs");
+    expect(filtered.length).toBeLessThan(full.length);
+  });
+});
+
 describe("all expected technique files exist on disk", () => {
   const techniqueDir = path.join(process.cwd(), "knowledge", "techniques");
   const expectedFiles = [
