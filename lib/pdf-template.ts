@@ -213,7 +213,7 @@ function drawVerificationSquare(page: PDFPage, pageH: number, x: number, y: numb
   drawCenteredText(page, pageH, "PRINT CHECK",         x + mid, y + mid - 12, 7.5, font, C.label);
   drawCenteredText(page, pageH, "Measure this square.", x + mid, y + mid + 2,  6.5, font, C.dim);
   drawCenteredText(page, pageH, "Must be 50×50mm.",     x + mid, y + mid + 12, 6.5, font, C.dim);
-  drawCenteredText(page, pageH, "If not → reprint at 100%.", x + mid, y + mid + 22, 6, font, C.danger);
+  drawCenteredText(page, pageH, "If not: reprint at 100%.", x + mid, y + mid + 22, 6, font, C.danger);
 }
 
 export async function generatePDF(design: CardDesign): Promise<Uint8Array> {
