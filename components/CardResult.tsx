@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CardDesign } from "@/types/card";
 import { generateSVG } from "@/lib/svg-template";
 
@@ -27,10 +27,13 @@ export default function CardResult({ design }: CardResultProps) {
 
   const svgString = useMemo(() => generateSVG(design), [design]);
 
-  const svgDataUrl = useMemo(
-    () => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgString)}`,
-    [svgString]
-  );
+  const [svgPreviewUrl, setSvgPreviewUrl] = useState<string>("");
+  useEffect(() => {
+    const blob = new Blob([svgString], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    setSvgPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [svgString]);
 
   function downloadTemplate() {
     const blob = new Blob([svgString], { type: "image/svg+xml" });
@@ -240,12 +243,14 @@ export default function CardResult({ design }: CardResultProps) {
 
             {/* SVG preview */}
             <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-              <img
-                src={svgDataUrl}
-                alt="Printable card template"
-                className="w-full h-auto block"
-                style={{ imageRendering: "crisp-edges" }}
-              />
+              {svgPreviewUrl && (
+                <img
+                  src={svgPreviewUrl}
+                  alt="Printable card template"
+                  className="w-full h-auto block"
+                  style={{ imageRendering: "crisp-edges" }}
+                />
+              )}
             </div>
 
             {/* Print instructions + download */}
