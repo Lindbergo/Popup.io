@@ -13,11 +13,11 @@ const COLORS = {
 };
 
 const SCALE = 2.83; // 1mm = 2.83 SVG px (72 dpi)
-
 const MARGIN = 20;
-const PIECE_GAP = 15;
-const LABEL_ABOVE = 18;
-const LABEL_BELOW = 16;
+const PIECE_GAP = 20;
+const LABEL_ABOVE = 22;
+const LABEL_BELOW = 18;
+const MIN_DIM_MM = 8; // clamp AI-generated dimensions so no piece is invisible
 
 function mm(v: number) {
   return v * SCALE;
@@ -36,8 +36,8 @@ function foldLineColor(type: FoldLine["type"]): string {
 }
 
 function renderPiece(piece: TemplatePiece, ox: number, oy: number): string {
-  const pw = mm(piece.width);
-  const ph = mm(piece.height);
+  const pw = Math.max(mm(piece.width),  mm(MIN_DIM_MM));
+  const ph = Math.max(mm(piece.height), mm(MIN_DIM_MM));
   let svg = "";
 
   for (const g of piece.glueZones ?? []) {
@@ -54,8 +54,16 @@ function renderPiece(piece: TemplatePiece, ox: number, oy: number): string {
     svg += `<line x1="${ox + mm(f.x1)}" y1="${oy + mm(f.y1)}" x2="${ox + mm(f.x2)}" y2="${oy + mm(f.y2)}" stroke="${foldLineColor(f.type)}" stroke-width="1.5" stroke-dasharray="${foldLineDash(f.type)}"/>`;
   }
 
-  svg += `<text x="${ox + pw / 2}" y="${oy - 5}" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="${COLORS.label}" font-weight="bold">${piece.label}</text>`;
-  svg += `<text x="${ox + pw / 2}" y="${oy + ph + 12}" text-anchor="middle" font-family="Arial, sans-serif" font-size="7.5" fill="#718096">${piece.width}×${piece.height}mm</text>`;
+  // Label above piece — white pill background so it reads against the page
+  const labelX = ox + pw / 2;
+  const labelY = oy - 8;
+  const labelText = piece.label;
+  const approxLabelW = labelText.length * 7 + 12;
+  svg += `<rect x="${labelX - approxLabelW / 2}" y="${labelY - 13}" width="${approxLabelW}" height="16" rx="3" fill="white" fill-opacity="0.85"/>`;
+  svg += `<text x="${labelX}" y="${labelY}" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="${COLORS.label}">${labelText}</text>`;
+
+  // Dimension below piece
+  svg += `<text x="${ox + pw / 2}" y="${oy + ph + 14}" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#718096">${piece.width}×${piece.height}mm</text>`;
 
   return svg;
 }
@@ -69,22 +77,21 @@ function renderLegend(x: number, y: number): string {
     { color: COLORS.glue, dash: "3,3", label: "Glue zone" },
   ];
 
-  let svg = `<text x="${x}" y="${y}" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="${COLORS.label}">Legend</text>`;
+  let svg = `<text x="${x}" y="${y}" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="${COLORS.label}">Legend</text>`;
 
   items.forEach((item, i) => {
-    const iy = y + 16 + i * 16;
+    const iy = y + 18 + i * 18;
     if (item.label === "Glue zone") {
       svg += `<rect x="${x}" y="${iy - 7}" width="24" height="10" fill="${COLORS.glueFill}" stroke="${item.color}" stroke-width="1" stroke-dasharray="${item.dash}"/>`;
     } else {
       svg += `<line x1="${x}" y1="${iy - 2}" x2="${x + 24}" y2="${iy - 2}" stroke="${item.color}" stroke-width="${item.label === "Cut line" ? 2 : 1.5}" stroke-dasharray="${item.dash}"/>`;
     }
-    svg += `<text x="${x + 30}" y="${iy}" font-family="Arial, sans-serif" font-size="9" fill="${COLORS.label}">${item.label}</text>`;
+    svg += `<text x="${x + 30}" y="${iy}" font-family="Arial, sans-serif" font-size="10" fill="${COLORS.label}">${item.label}</text>`;
   });
 
   return svg;
 }
 
-// 50×50mm verification square with crosshairs — lets the user confirm print scale is correct
 function renderVerificationSquare(x: number, y: number): string {
   const side = mm(50);
   const mid = side / 2;
@@ -92,14 +99,11 @@ function renderVerificationSquare(x: number, y: number): string {
 
   let svg = "";
 
-  // Background
   svg += `<rect x="${x}" y="${y}" width="${side}" height="${side}" fill="white" stroke="${COLORS.border}" stroke-width="1.5"/>`;
 
-  // Crosshairs
   svg += `<line x1="${x + mid}" y1="${y}" x2="${x + mid}" y2="${y + side}" stroke="${COLORS.border}" stroke-width="0.75" stroke-dasharray="4,3"/>`;
   svg += `<line x1="${x}" y1="${y + mid}" x2="${x + side}" y2="${y + mid}" stroke="${COLORS.border}" stroke-width="0.75" stroke-dasharray="4,3"/>`;
 
-  // Corner ticks — solid marks at each corner for easy ruler placement
   const corners = [
     { cx: x, cy: y, dx: 1, dy: 1 },
     { cx: x + side, cy: y, dx: -1, dy: 1 },
@@ -111,15 +115,12 @@ function renderVerificationSquare(x: number, y: number): string {
     svg += `<line x1="${c.cx}" y1="${c.cy}" x2="${c.cx}" y2="${c.cy + c.dy * tickLen}" stroke="${COLORS.border}" stroke-width="2"/>`;
   }
 
-  // Dimension labels on the square
-  svg += `<text x="${x + mid}" y="${y - 4}" text-anchor="middle" font-family="Arial, sans-serif" font-size="7" fill="${COLORS.label}">50mm</text>`;
-  svg += `<text x="${x - 4}" y="${y + mid + 3}" text-anchor="end" font-family="Arial, sans-serif" font-size="7" fill="${COLORS.label}">50mm</text>`;
-
-  // Header
-  svg += `<text x="${x + mid}" y="${y + mid - 8}" text-anchor="middle" font-family="Arial, sans-serif" font-size="7.5" font-weight="bold" fill="${COLORS.label}">PRINT CHECK</text>`;
-  svg += `<text x="${x + mid}" y="${y + mid + 5}" text-anchor="middle" font-family="Arial, sans-serif" font-size="6.5" fill="#4a5568">Measure this square.</text>`;
-  svg += `<text x="${x + mid}" y="${y + mid + 15}" text-anchor="middle" font-family="Arial, sans-serif" font-size="6.5" fill="#4a5568">Must be exactly 50×50mm.</text>`;
-  svg += `<text x="${x + mid}" y="${y + mid + 25}" text-anchor="middle" font-family="Arial, sans-serif" font-size="6" fill="#e53e3e">If not → reprint at 100%.</text>`;
+  svg += `<text x="${x + mid}" y="${y - 4}" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="${COLORS.label}">50mm</text>`;
+  svg += `<text x="${x - 4}" y="${y + mid + 3}" text-anchor="end" font-family="Arial, sans-serif" font-size="8" fill="${COLORS.label}">50mm</text>`;
+  svg += `<text x="${x + mid}" y="${y + mid - 8}" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="${COLORS.label}">PRINT CHECK</text>`;
+  svg += `<text x="${x + mid}" y="${y + mid + 5}" text-anchor="middle" font-family="Arial, sans-serif" font-size="7" fill="#4a5568">Measure this square.</text>`;
+  svg += `<text x="${x + mid}" y="${y + mid + 15}" text-anchor="middle" font-family="Arial, sans-serif" font-size="7" fill="#4a5568">Must be exactly 50×50mm.</text>`;
+  svg += `<text x="${x + mid}" y="${y + mid + 25}" text-anchor="middle" font-family="Arial, sans-serif" font-size="6.5" fill="#e53e3e">If not: reprint at 100%.</text>`;
 
   return svg;
 }
@@ -132,12 +133,22 @@ interface SVGResult {
 
 function buildSVG(design: CardDesign): SVGResult {
   const pieces = design.template_pieces ?? [];
-  const colCount = Math.max(1, Math.min(3, pieces.length));
 
-  const maxPiecePx = pieces.length > 0
-    ? Math.max(...pieces.map((p) => mm(p.width)))
-    : mm(100);
-  const colWidth = maxPiecePx + PIECE_GAP;
+  // ≤3 pieces → one row; 4+ pieces → 2-column grid (e.g. 4 pieces = 2×2)
+  const colCount = pieces.length <= 3 ? Math.max(1, pieces.length) : 2;
+
+  // Per-column max width — avoids blowing out the grid when one piece is much wider
+  const colMaxW: number[] = new Array(colCount).fill(0);
+  pieces.forEach((piece, i) => {
+    const col = i % colCount;
+    colMaxW[col] = Math.max(colMaxW[col], mm(Math.max(piece.width, MIN_DIM_MM)));
+  });
+
+  // Cumulative x offsets for each column
+  const colX: number[] = [MARGIN];
+  for (let c = 1; c < colCount; c++) {
+    colX[c] = colX[c - 1] + colMaxW[c - 1] + PIECE_GAP;
+  }
 
   const positions: { x: number; y: number }[] = [];
   let rowY = MARGIN + 30 + LABEL_ABOVE;
@@ -149,27 +160,26 @@ function buildSVG(design: CardDesign): SVGResult {
       rowY += rowMaxH + PIECE_GAP + LABEL_ABOVE + LABEL_BELOW;
       rowMaxH = 0;
     }
-    const x = MARGIN + col * (colWidth + PIECE_GAP);
-    positions.push({ x, y: rowY });
-    rowMaxH = Math.max(rowMaxH, mm(piece.height));
+    positions.push({ x: colX[col], y: rowY });
+    rowMaxH = Math.max(rowMaxH, mm(Math.max(piece.height, MIN_DIM_MM)));
   });
 
   const legendY = rowY + rowMaxH + LABEL_BELOW + PIECE_GAP + 40;
 
-  // Verification square sits to the right of the legend
   const verifySquareSide = mm(50);
-  const legendWidth = 220; // approximate legend text width in px
+  const legendWidth = 260;
   const verifyX = MARGIN + legendWidth + 30;
   const verifyY = legendY;
 
+  const totalColW = colX[colCount - 1] + colMaxW[colCount - 1];
   const minWidth = verifyX + verifySquareSide + MARGIN;
-  const svgWidth = Math.max(MARGIN * 2 + colCount * (colWidth + PIECE_GAP), minWidth, 400);
+  const svgWidth = Math.max(totalColW + MARGIN, minWidth, 400);
   const svgHeight = legendY + Math.max(100, verifySquareSide + 30);
 
   let content = "";
 
-  content += `<text x="${svgWidth / 2}" y="20" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="${COLORS.label}">${design.title ?? "Card"} — Print Template</text>`;
-  content += `<text x="${svgWidth / 2}" y="36" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#718096">Step 1: check the PRINT CHECK square after printing. Step 2: cut red lines. Step 3: fold on dashed lines.</text>`;
+  content += `<text x="${svgWidth / 2}" y="22" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="${COLORS.label}">${design.title ?? "Card"} — Print Template</text>`;
+  content += `<text x="${svgWidth / 2}" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#718096">Step 1: check PRINT CHECK square. Step 2: cut red lines. Step 3: fold on dashed lines.</text>`;
 
   pieces.forEach((piece, i) => {
     content += renderPiece(piece, positions[i].x, positions[i].y);
@@ -195,9 +205,6 @@ export function generateSVG(design: CardDesign): string {
   return buildSVG(design).svg;
 }
 
-// Wraps the SVG in a minimal HTML page with @page CSS that locks the print size.
-// Open this in a new window and call window.print() for reliable actual-size printing
-// across Chrome, Firefox, Safari, and Edge — without needing the user to find scale settings.
 export function generatePrintHTML(design: CardDesign): string {
   const { svg, widthMm, heightMm } = buildSVG(design);
   const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
@@ -242,7 +249,7 @@ export function generatePrintHTML(design: CardDesign): string {
 </head>
 <body>
 <div class="no-print">
-  Your browser will now print at exact scale. In the print dialog: set Scale to <strong>100%</strong> (or "Actual Size") and margins to <strong>None</strong>. Then click Print.
+  In the print dialog: set Scale to <strong>100%</strong> (or "Actual Size") and margins to <strong>None</strong>. Then click Print.
 </div>
 <img src="data:image/svg+xml;base64,${svgBase64}" alt="Print template" />
 </body>
