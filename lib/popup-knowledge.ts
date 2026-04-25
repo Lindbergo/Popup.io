@@ -8,7 +8,7 @@ export function getPopupTechniques(): string {
 
   const dir = path.join(process.cwd(), "knowledge", "techniques");
 
-  // Load in a fixed order: index first, shared rules second, then individual techniques
+  // Load in a fixed order: index first, shared rules second, then individual techniques, then design rules
   const order = [
     "index.md",
     "_shared.md",
@@ -21,6 +21,9 @@ export function getPopupTechniques(): string {
     "rotating-disc.md",
     "tunnel-layers.md",
     "pop-up-text.md",
+    "clearance-rules.md",
+    "character-shapes.md",
+    "photo-placement-sizing.md",
   ];
 
   const sections = order.map((filename) => {
