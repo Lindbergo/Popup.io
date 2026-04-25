@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { CardDesign } from "@/types/card";
-import { generateSVG } from "@/lib/svg-template";
+import { generateSVG, generatePrintHTML } from "@/lib/svg-template";
 
 interface CardResultProps {
   design: CardDesign;
@@ -43,6 +43,20 @@ export default function CardResult({ design }: CardResultProps) {
     a.download = `${design.title.replace(/\s+/g, "-")}-template.svg`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function printTemplate() {
+    const html = generatePrintHTML(design);
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, "_blank");
+    // Trigger print once the page has loaded
+    if (win) {
+      win.onload = () => {
+        win.print();
+        URL.revokeObjectURL(url);
+      };
+    }
   }
 
   return (
@@ -253,18 +267,57 @@ export default function CardResult({ design }: CardResultProps) {
               )}
             </div>
 
-            {/* Print instructions + download */}
-            <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 text-xs text-gray-500 space-y-2">
-              <div className="font-semibold text-gray-700">Printing instructions</div>
-              <p>Print at 100% scale — do not use &quot;fit to page&quot; or &quot;scale to fit&quot;. Use A4 or Letter paper. After printing, verify dimensions by measuring a labeled piece before cutting.</p>
+            {/* Print check callout */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 space-y-1">
+              <div className="font-semibold text-amber-800">Before you cut anything</div>
+              <p>The template includes a <strong>PRINT CHECK square</strong> in the bottom-right corner. After printing, measure it with a ruler. It must be exactly <strong>50×50mm</strong>. If it&apos;s any other size, your printer scaled the output — reprint before cutting.</p>
             </div>
 
-            <button
-              onClick={downloadTemplate}
-              className="w-full rounded-xl bg-gray-900 hover:bg-gray-700 text-white font-semibold py-3 text-sm transition-all"
-            >
-              Download Template (SVG)
-            </button>
+            {/* Browser-specific print instructions */}
+            <div className="rounded-xl border border-gray-100 bg-white divide-y divide-gray-100 text-xs overflow-hidden">
+              <div className="px-4 py-3 font-semibold text-gray-700 bg-gray-50">
+                How to print at actual size — by browser
+              </div>
+              {[
+                {
+                  browser: "Chrome / Edge",
+                  steps: 'Click Print → More settings → Scale: Custom → type "100" → Print',
+                },
+                {
+                  browser: "Firefox",
+                  steps: 'Click Print → Scale: 100% → Print',
+                },
+                {
+                  browser: "Safari (Mac)",
+                  steps: 'File → Print → Paper Handling → Scale to fit paper: OFF → Print',
+                },
+                {
+                  browser: "Windows (any browser)",
+                  steps: 'Print dialog → Page setup → Scale: 100% → no margins → Print',
+                },
+              ].map((row) => (
+                <div key={row.browser} className="px-4 py-2.5 flex gap-3">
+                  <span className="shrink-0 font-semibold text-gray-600 w-32">{row.browser}</span>
+                  <span className="text-gray-500">{row.steps}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={printTemplate}
+                className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold py-3 text-sm transition-all"
+              >
+                Print Template
+              </button>
+              <button
+                onClick={downloadTemplate}
+                className="flex-1 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 text-sm transition-all"
+              >
+                Download SVG
+              </button>
+            </div>
           </div>
         )}
       </div>
