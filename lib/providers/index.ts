@@ -1,16 +1,16 @@
 import type { AIProvider } from "./shared";
 
 export function getProvider(): AIProvider {
-  if (process.env.XAI_API_KEY) {
+  if (process.env.GROQ_API_KEY) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require("./grok").grokProvider as AIProvider;
+    return require("./groq").groqProvider as AIProvider;
   }
   if (process.env.ANTHROPIC_API_KEY) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require("./anthropic").anthropicProvider as AIProvider;
   }
   throw new Error(
-    "No AI provider configured. Set XAI_API_KEY (Grok, free) or ANTHROPIC_API_KEY (Claude) in your .env.local file."
+    "No AI provider configured. Set GROQ_API_KEY (Groq/Llama, free) or ANTHROPIC_API_KEY (Claude) in your .env.local file."
   );
 }
 

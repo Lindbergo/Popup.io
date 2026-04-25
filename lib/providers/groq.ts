@@ -3,15 +3,20 @@ import type { GenerateRequest, CardDesign } from "@/types/card";
 import { AIProvider, SYSTEM_PROMPT, parseCardDesign, buildUserText } from "./shared";
 
 const client = new OpenAI({
-  apiKey: process.env.XAI_API_KEY,
-  baseURL: "https://api.x.ai/v1",
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
 });
 
-export const grokProvider: AIProvider = {
+// Vision model when an image is provided; fast text model otherwise
+const MODEL_TEXT   = "llama-3.3-70b-versatile";
+const MODEL_VISION = "llama-3.2-90b-vision-preview";
+
+export const groqProvider: AIProvider = {
   async generateCardDesign(request: GenerateRequest, techniques: string): Promise<CardDesign> {
+    const hasImage = !!(request.imageBase64 && request.imageMimeType);
     const userContent: OpenAI.ChatCompletionContentPart[] = [];
 
-    if (request.imageBase64 && request.imageMimeType) {
+    if (hasImage) {
       userContent.push({
         type: "image_url",
         image_url: {
@@ -26,7 +31,7 @@ export const grokProvider: AIProvider = {
     });
 
     const response = await client.chat.completions.create({
-      model: "grok-3-mini",
+      model: hasImage ? MODEL_VISION : MODEL_TEXT,
       max_tokens: 4096,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
