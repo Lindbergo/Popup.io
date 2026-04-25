@@ -3,17 +3,23 @@
 import { useState } from "react";
 import CardInput from "@/components/CardInput";
 import CardResult from "@/components/CardResult";
+import SceneBuilder from "@/components/SceneBuilder";
 import type { CardDesign, GenerateRequest } from "@/types/card";
 
-export default function Home() {
-  const [design, setDesign] = useState<CardDesign | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+type Mode = "ai" | "scene";
 
-  async function handleGenerate(request: GenerateRequest) {
+export default function Home() {
+  const [mode, setMode]       = useState<Mode>("scene");
+  const [design, setDesign]   = useState<CardDesign | null>(null);
+  const [photos, setPhotos]   = useState<Map<string, string>>(new Map());
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  async function handleAIGenerate(request: GenerateRequest) {
     setLoading(true);
     setError(null);
     setDesign(null);
+    setPhotos(new Map());
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -30,8 +36,15 @@ export default function Home() {
     }
   }
 
+  function handleSceneBuild(builtDesign: CardDesign, builtPhotos: Map<string, string>) {
+    setDesign(builtDesign);
+    setPhotos(builtPhotos);
+    setError(null);
+  }
+
   function handleReset() {
     setDesign(null);
+    setPhotos(new Map());
     setError(null);
   }
 
@@ -41,46 +54,57 @@ export default function Home() {
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 rounded-full bg-rose-100 px-4 py-1.5 text-sm font-medium text-rose-600 mb-4">
-            AI-powered pop-up card designer
+            Pop-up card designer
           </div>
           <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
             Popup<span className="text-rose-500">.io</span>
           </h1>
           <p className="mt-3 text-gray-500 text-base leading-relaxed max-w-md mx-auto">
-            Describe your idea or upload an image — get a complete pop-up card design with step-by-step instructions and a printable template.
+            Build a pop-up card from a proven scene template — or let AI design one from your description.
           </p>
         </div>
 
-        {/* How it works */}
+        {/* Input */}
         {!design && !loading && (
-          <div className="mb-8 grid grid-cols-3 gap-3 text-center text-xs text-gray-500">
-            {[
-              { icon: "✍️", label: "Describe your idea or upload a photo" },
-              { icon: "✨", label: "AI designs the card using proven techniques" },
-              { icon: "🖨️", label: "Print the template & follow the guide" },
-            ].map((item, i) => (
-              <div key={i} className="rounded-xl bg-white border border-gray-100 p-3 shadow-sm">
-                <div className="text-2xl mb-1.5">{item.icon}</div>
-                <div>{item.label}</div>
-              </div>
-            ))}
+          <div className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
+            {/* Mode tabs */}
+            <div className="flex border-b border-gray-100">
+              {([
+                { id: "scene" as Mode, label: "Scene Builder", sub: "Instant · no AI" },
+                { id: "ai"    as Mode, label: "AI Describe",   sub: "Free-text · 20-40s" },
+              ] as const).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setMode(tab.id)}
+                  className={`flex-1 py-3 text-center transition-colors ${
+                    mode === tab.id
+                      ? "bg-rose-50 border-b-2 border-rose-500"
+                      : "hover:bg-gray-50"
+                  }`}
+                >
+                  <div className={`text-sm font-semibold ${mode === tab.id ? "text-rose-600" : "text-gray-600"}`}>
+                    {tab.label}
+                  </div>
+                  <div className="text-xs text-gray-400">{tab.sub}</div>
+                </button>
+              ))}
+            </div>
+
+            <div className="p-6">
+              {mode === "scene" ? (
+                <SceneBuilder onBuild={handleSceneBuild} />
+              ) : (
+                <CardInput onGenerate={handleAIGenerate} loading={loading} />
+              )}
+            </div>
           </div>
         )}
 
-        {/* Input form */}
-        {!design && (
-          <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-6">
-            <CardInput onGenerate={handleGenerate} loading={loading} />
-          </div>
-        )}
-
-        {/* Loading state */}
+        {/* Loading */}
         {loading && (
           <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-10 text-center">
             <div className="inline-flex flex-col items-center gap-4">
-              <div className="relative">
-                <div className="w-14 h-14 rounded-full border-4 border-rose-100 border-t-rose-500 animate-spin" />
-              </div>
+              <div className="w-14 h-14 rounded-full border-4 border-rose-100 border-t-rose-500 animate-spin" />
               <div>
                 <div className="font-semibold text-gray-800">Designing your card...</div>
                 <div className="text-sm text-gray-400 mt-1">Selecting mechanisms, calculating dimensions, generating template</div>
@@ -115,11 +139,10 @@ export default function Home() {
               </svg>
               Design another card
             </button>
-            <CardResult design={design} />
+            <CardResult design={design} photos={photos} />
           </div>
         )}
 
-        {/* Footer */}
         <div className="mt-12 text-center text-xs text-gray-400">
           Popup.io — Built on proven paper engineering techniques
         </div>

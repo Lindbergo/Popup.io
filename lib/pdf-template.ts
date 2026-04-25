@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import type { CardDesign, TemplatePiece, FoldLine } from "@/types/card";
 
 // PDF uses points: 1mm = 2.835pt
@@ -73,9 +73,32 @@ function drawPiece(
   ox: number,
   oy: number,
   font: PDFFont,
+  embeddedPhoto?: PDFImage,
 ) {
   const pw = mm(piece.width);
   const ph = mm(piece.height);
+
+  // Photo zone — drawn first so lines render on top
+  const pz = piece.photo_zone;
+  if (pz && embeddedPhoto) {
+    page.drawImage(embeddedPhoto, {
+      x:      ox + mm(pz.x),
+      y:      fy(pageH, oy + mm(pz.y) + mm(pz.height)),
+      width:  mm(pz.width),
+      height: mm(pz.height),
+    });
+  } else if (pz) {
+    page.drawRectangle({
+      x:      ox + mm(pz.x),
+      y:      fy(pageH, oy + mm(pz.y) + mm(pz.height)),
+      width:  mm(pz.width),
+      height: mm(pz.height),
+      color:  rgb(0.94, 0.96, 1),
+      borderColor: rgb(0.58, 0.77, 0.99),
+      borderWidth: 0.75,
+    });
+    drawCenteredText(page, pageH, "photo", ox + mm(pz.x + pz.width / 2), oy + mm(pz.y + pz.height / 2), 7, font, rgb(0.58, 0.77, 0.99));
+  }
 
   // Glue zones
   for (const g of piece.glueZones ?? []) {
@@ -216,7 +239,14 @@ function drawVerificationSquare(page: PDFPage, pageH: number, x: number, y: numb
   drawCenteredText(page, pageH, "If not: reprint at 100%.", x + mid, y + mid + 22, 6, font, C.danger);
 }
 
-export async function generatePDF(design: CardDesign): Promise<Uint8Array> {
+async function embedPhoto(pdfDoc: PDFDocument, dataUrl: string): Promise<PDFImage> {
+  const base64 = dataUrl.split(",")[1];
+  const isJpg = dataUrl.startsWith("data:image/jpeg") || dataUrl.startsWith("data:image/jpg");
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  return isJpg ? pdfDoc.embedJpg(bytes) : pdfDoc.embedPng(bytes);
+}
+
+export async function generatePDF(design: CardDesign, photos?: Map<string, string>): Promise<Uint8Array> {
   const pieces = design.template_pieces ?? [];
   const colCount = Math.max(1, Math.min(3, pieces.length));
 
@@ -266,9 +296,17 @@ export async function generatePDF(design: CardDesign): Promise<Uint8Array> {
   const subtitle = "Step 1: check PRINT CHECK square below. Step 2: cut red lines. Step 3: fold on dashed lines.";
   drawCenteredText(page, pageHeight, subtitle, pageWidth / 2, 24, 8, font, C.dim);
 
+  // Pre-embed photos for pieces that have a photo_zone and a supplied photo
+  const embeddedPhotos = new Map<string, PDFImage>();
+  for (const piece of pieces) {
+    if (piece.photo_zone && photos?.has(piece.id)) {
+      embeddedPhotos.set(piece.id, await embedPhoto(pdfDoc, photos.get(piece.id)!));
+    }
+  }
+
   // Pieces
   pieces.forEach((piece, i) => {
-    drawPiece(page, pageHeight, piece, positions[i].x, positions[i].y, font);
+    drawPiece(page, pageHeight, piece, positions[i].x, positions[i].y, font, embeddedPhotos.get(piece.id));
   });
 
   // Legend + verification square

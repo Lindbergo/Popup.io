@@ -35,10 +35,16 @@ function foldLineColor(type: FoldLine["type"]): string {
   return COLORS.score;
 }
 
-function renderPiece(piece: TemplatePiece, ox: number, oy: number): string {
+function renderPiece(
+  piece: TemplatePiece,
+  ox: number,
+  oy: number,
+  photos?: Map<string, string>,
+): { content: string; defs: string } {
   const pw = Math.max(mm(piece.width),  mm(MIN_DIM_MM));
   const ph = Math.max(mm(piece.height), mm(MIN_DIM_MM));
   let svg = "";
+  let defs = "";
 
   for (const g of piece.glueZones ?? []) {
     svg += `<rect x="${ox + mm(g.x)}" y="${oy + mm(g.y)}" width="${mm(g.width)}" height="${mm(g.height)}" fill="${COLORS.glueFill}" stroke="${COLORS.glue}" stroke-width="1" stroke-dasharray="3,3"/>`;
@@ -54,6 +60,19 @@ function renderPiece(piece: TemplatePiece, ox: number, oy: number): string {
     svg += `<line x1="${ox + mm(f.x1)}" y1="${oy + mm(f.y1)}" x2="${ox + mm(f.x2)}" y2="${oy + mm(f.y2)}" stroke="${foldLineColor(f.type)}" stroke-width="1.5" stroke-dasharray="${foldLineDash(f.type)}"/>`;
   }
 
+  // Photo zone — rendered behind the fold/cut lines so lines stay visible
+  const pz = piece.photo_zone;
+  const photoDataUrl = photos?.get(piece.id);
+  if (pz && photoDataUrl) {
+    const clipId = `photo-clip-${piece.id}`;
+    defs += `<clipPath id="${clipId}"><rect x="${ox + mm(pz.x)}" y="${oy + mm(pz.y)}" width="${mm(pz.width)}" height="${mm(pz.height)}"/></clipPath>`;
+    svg += `<image href="${photoDataUrl}" x="${ox + mm(pz.x)}" y="${oy + mm(pz.y)}" width="${mm(pz.width)}" height="${mm(pz.height)}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${clipId})"/>`;
+  } else if (pz) {
+    // Placeholder when no photo uploaded yet
+    svg += `<rect x="${ox + mm(pz.x)}" y="${oy + mm(pz.y)}" width="${mm(pz.width)}" height="${mm(pz.height)}" fill="#f0f4ff" stroke="#93c5fd" stroke-width="1" stroke-dasharray="4,3"/>`;
+    svg += `<text x="${ox + mm(pz.x + pz.width / 2)}" y="${oy + mm(pz.y + pz.height / 2)}" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="8" fill="#93c5fd">photo</text>`;
+  }
+
   // Label above piece — white pill background so it reads against the page
   const labelX = ox + pw / 2;
   const labelY = oy - 8;
@@ -65,7 +84,7 @@ function renderPiece(piece: TemplatePiece, ox: number, oy: number): string {
   // Dimension below piece
   svg += `<text x="${ox + pw / 2}" y="${oy + ph + 14}" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#718096">${piece.width}×${piece.height}mm</text>`;
 
-  return svg;
+  return { content: svg, defs };
 }
 
 function renderLegend(x: number, y: number): string {
@@ -131,7 +150,7 @@ interface SVGResult {
   heightMm: number;
 }
 
-function buildSVG(design: CardDesign): SVGResult {
+function buildSVG(design: CardDesign, photos?: Map<string, string>): SVGResult {
   const pieces = design.template_pieces ?? [];
 
   // Use 2 columns only when two max-width pieces fit side-by-side within A4 portrait
@@ -185,12 +204,15 @@ function buildSVG(design: CardDesign): SVGResult {
   const svgHeight = legendY + Math.max(100, verifySquareSide + 30);
 
   let content = "";
+  let defs = "";
 
   content += `<text x="${svgWidth / 2}" y="22" text-anchor="middle" font-family="Arial, sans-serif" font-size="15" font-weight="bold" fill="${COLORS.label}">${design.title ?? "Card"} — Print Template</text>`;
   content += `<text x="${svgWidth / 2}" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#718096">Step 1: check PRINT CHECK square. Step 2: cut red lines. Step 3: fold on dashed lines.</text>`;
 
   pieces.forEach((piece, i) => {
-    content += renderPiece(piece, positions[i].x, positions[i].y);
+    const { content: pc, defs: pd } = renderPiece(piece, positions[i].x, positions[i].y, photos);
+    content += pc;
+    defs += pd;
   });
 
   content += renderLegend(MARGIN, legendY);
@@ -198,6 +220,7 @@ function buildSVG(design: CardDesign): SVGResult {
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
+  ${defs ? `<defs>${defs}</defs>` : ""}
   <rect width="${svgWidth}" height="${svgHeight}" fill="${COLORS.background}"/>
   ${content}
 </svg>`;
@@ -209,12 +232,12 @@ function buildSVG(design: CardDesign): SVGResult {
   };
 }
 
-export function generateSVG(design: CardDesign): string {
-  return buildSVG(design).svg;
+export function generateSVG(design: CardDesign, photos?: Map<string, string>): string {
+  return buildSVG(design, photos).svg;
 }
 
-export function generatePrintHTML(design: CardDesign): string {
-  const { svg, widthMm, heightMm } = buildSVG(design);
+export function generatePrintHTML(design: CardDesign, photos?: Map<string, string>): string {
+  const { svg, widthMm, heightMm } = buildSVG(design, photos);
   const svgBase64 = btoa(unescape(encodeURIComponent(svg)));
 
   return `<!DOCTYPE html>

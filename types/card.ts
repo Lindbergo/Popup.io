@@ -29,6 +29,13 @@ export interface AssemblyStep {
   tip?: string;
 }
 
+export interface PhotoZone {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface TemplatePiece {
   id: string;
   label: string;
@@ -39,6 +46,7 @@ export interface TemplatePiece {
   foldLines: FoldLine[];
   cutLines: CutLine[];
   glueZones: GlueZone[];
+  photo_zone?: PhotoZone;
 }
 
 export interface FoldLine {

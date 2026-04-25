@@ -7,6 +7,7 @@ import { generatePDF } from "@/lib/pdf-template";
 
 interface CardResultProps {
   design: CardDesign;
+  photos?: Map<string, string>;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -23,11 +24,11 @@ const TABS = [
 
 type Tab = (typeof TABS)[number]["id"];
 
-export default function CardResult({ design }: CardResultProps) {
+export default function CardResult({ design, photos }: CardResultProps) {
   const [activeTab, setActiveTab] = useState<Tab>("guide");
   const [exportingPDF, setExportingPDF] = useState(false);
 
-  const svgString = useMemo(() => generateSVG(design), [design]);
+  const svgString = useMemo(() => generateSVG(design, photos), [design, photos]);
 
   const [svgPreviewUrl, setSvgPreviewUrl] = useState<string>("");
   useEffect(() => {
@@ -50,7 +51,7 @@ export default function CardResult({ design }: CardResultProps) {
   async function downloadPDF() {
     setExportingPDF(true);
     try {
-      const bytes = await generatePDF(design);
+      const bytes = await generatePDF(design, photos);
       const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -64,7 +65,7 @@ export default function CardResult({ design }: CardResultProps) {
   }
 
   function printTemplate() {
-    const html = generatePrintHTML(design);
+    const html = generatePrintHTML(design, photos);
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const win = window.open(url, "_blank");
