@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CardDesign } from "@/types/card";
 import { generateSVG, generatePrintHTML } from "@/lib/svg-template";
+import { generatePDF } from "@/lib/pdf-template";
 
 interface CardResultProps {
   design: CardDesign;
@@ -24,6 +25,7 @@ type Tab = (typeof TABS)[number]["id"];
 
 export default function CardResult({ design }: CardResultProps) {
   const [activeTab, setActiveTab] = useState<Tab>("guide");
+  const [exportingPDF, setExportingPDF] = useState(false);
 
   const svgString = useMemo(() => generateSVG(design), [design]);
 
@@ -43,6 +45,22 @@ export default function CardResult({ design }: CardResultProps) {
     a.download = `${design.title.replace(/\s+/g, "-")}-template.svg`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function downloadPDF() {
+    setExportingPDF(true);
+    try {
+      const bytes = await generatePDF(design);
+      const blob = new Blob([bytes.buffer as ArrayBuffer], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${design.title.replace(/\s+/g, "-")}-template.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportingPDF(false);
+    }
   }
 
   function printTemplate() {
@@ -310,6 +328,13 @@ export default function CardResult({ design }: CardResultProps) {
                 className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold py-3 text-sm transition-all"
               >
                 Print Template
+              </button>
+              <button
+                onClick={downloadPDF}
+                disabled={exportingPDF}
+                className="flex-1 rounded-xl bg-gray-900 hover:bg-gray-700 disabled:bg-gray-200 disabled:text-gray-400 text-white font-semibold py-3 text-sm transition-all"
+              >
+                {exportingPDF ? "Generating PDF…" : "Download PDF"}
               </button>
               <button
                 onClick={downloadTemplate}
