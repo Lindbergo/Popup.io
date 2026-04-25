@@ -134,10 +134,18 @@ interface SVGResult {
 function buildSVG(design: CardDesign): SVGResult {
   const pieces = design.template_pieces ?? [];
 
-  // ≤3 pieces → one row; 4+ pieces → 2-column grid (e.g. 4 pieces = 2×2)
-  const colCount = pieces.length <= 3 ? Math.max(1, pieces.length) : 2;
+  // Use 2 columns only when two max-width pieces fit side-by-side within A4 portrait
+  // (190mm content width). Wide pieces like a card back force everything into 1 column
+  // so the template stays portrait-oriented and prints on a single sheet.
+  const TARGET_CONTENT_MM = 190;
+  const maxPieceWmm = pieces.length > 0
+    ? Math.max(...pieces.map((p) => Math.max(p.width, MIN_DIM_MM)))
+    : 100;
+  const colCount = pieces.length >= 2 && maxPieceWmm * 2 + PIECE_GAP / SCALE <= TARGET_CONTENT_MM
+    ? 2
+    : 1;
 
-  // Per-column max width — avoids blowing out the grid when one piece is much wider
+  // Per-column max width — each column is only as wide as its widest piece
   const colMaxW: number[] = new Array(colCount).fill(0);
   pieces.forEach((piece, i) => {
     const col = i % colCount;
