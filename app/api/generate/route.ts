@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateCardDesign } from "@/lib/generate-card";
 import type { GenerateRequest } from "@/types/card";
 
+// Vercel Hobby plan max; AI calls regularly take 20-40s
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as GenerateRequest;
