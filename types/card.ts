@@ -63,6 +63,16 @@ export interface GlueZone {
   height: number;
 }
 
+export interface PhotoPlacement {
+  piece_id: string;
+  piece_label: string;
+  print_width_mm: number;
+  print_height_mm: number;
+  position_on_piece: string;
+  attach_at_step: number;
+  notes: string;
+}
+
 export interface CardDesign {
   title: string;
   concept: string;
@@ -79,6 +89,7 @@ export interface CardDesign {
   steps: AssemblyStep[];
   design_notes: string;
   template_pieces: TemplatePiece[];
+  photo_placements?: PhotoPlacement[];
 }
 
 export interface GenerateRequest {

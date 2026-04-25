@@ -85,6 +85,41 @@ export default function CardResult({ design }: CardResultProps) {
         </div>
       </div>
 
+      {/* Photo placements — shown only when present */}
+      {design.photo_placements && design.photo_placements.length > 0 && (
+        <div className="rounded-2xl border border-violet-200 bg-violet-50 p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">📸</span>
+            <span className="font-semibold text-violet-900">
+              Your photo{design.photo_placements.length > 1 ? "s" : ""} — here's exactly where they go
+            </span>
+          </div>
+          {design.photo_placements.map((p, i) => (
+            <div
+              key={i}
+              className="rounded-xl bg-white border border-violet-100 p-4 flex gap-4 items-start"
+            >
+              <div className="shrink-0 w-8 h-8 rounded-full bg-violet-100 text-violet-700 text-sm font-bold flex items-center justify-center">
+                {i + 1}
+              </div>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="font-semibold text-sm text-gray-900">
+                  Attach to: {p.piece_label}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Print size: <span className="font-medium text-gray-700">{p.print_width_mm} × {p.print_height_mm} mm</span>
+                  &nbsp;·&nbsp; Position: <span className="font-medium text-gray-700">{p.position_on_piece}</span>
+                  &nbsp;·&nbsp; Do this at <span className="font-medium text-gray-700">Step {p.attach_at_step}</span>
+                </div>
+                {p.notes && (
+                  <div className="text-xs text-violet-700 italic">{p.notes}</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Technique summary */}
       <div className="rounded-xl border border-gray-100 bg-white p-4 text-sm text-gray-600">
         <div className="font-semibold text-gray-800 mb-1">Why these mechanisms?</div>

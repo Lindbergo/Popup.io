@@ -14,6 +14,7 @@ When given a scene description or image, you:
 3. Generate precise measurements (in mm) for every piece
 4. Write clear, numbered assembly steps in the correct order
 5. Generate template piece data for a printable SVG template
+6. If the user uploads a photo or mentions pasting a photo/picture of themselves or someone else, populate photo_placements with exact print size, which piece to attach it to, and at which step — be specific and actionable
 
 Output ONLY a single valid JSON object — no markdown fences, no explanation text — matching this shape exactly:
 
@@ -33,6 +34,15 @@ Output ONLY a single valid JSON object — no markdown fences, no explanation te
     "foldLines": [{ "type": "valley"|"mountain"|"score", "x1": number, "y1": number, "x2": number, "y2": number }],
     "cutLines": [{ "x1": number, "y1": number, "x2": number, "y2": number }],
     "glueZones": [{ "x": number, "y": number, "width": number, "height": number }]
+  }],
+  "photo_placements": [{
+    "piece_id": "string",
+    "piece_label": "string",
+    "print_width_mm": number,
+    "print_height_mm": number,
+    "position_on_piece": "string",
+    "attach_at_step": number,
+    "notes": "string"
   }]
 }`;
 
