@@ -12,6 +12,7 @@ export default function Home() {
   const [mode, setMode]       = useState<Mode>("scene");
   const [design, setDesign]   = useState<CardDesign | null>(null);
   const [photos, setPhotos]   = useState<Map<string, string>>(new Map());
+  const [preview, setPreview] = useState<React.ReactNode>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
 
@@ -20,6 +21,7 @@ export default function Home() {
     setError(null);
     setDesign(null);
     setPhotos(new Map());
+    setPreview(null);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -36,15 +38,17 @@ export default function Home() {
     }
   }
 
-  function handleSceneBuild(builtDesign: CardDesign, builtPhotos: Map<string, string>) {
+  function handleSceneBuild(builtDesign: CardDesign, builtPhotos: Map<string, string>, builtPreview: React.ReactNode) {
     setDesign(builtDesign);
     setPhotos(builtPhotos);
+    setPreview(builtPreview);
     setError(null);
   }
 
   function handleReset() {
     setDesign(null);
     setPhotos(new Map());
+    setPreview(null);
     setError(null);
   }
 
@@ -139,7 +143,7 @@ export default function Home() {
               </svg>
               Design another card
             </button>
-            <CardResult design={design} photos={photos} />
+            <CardResult design={design} photos={photos} preview={preview} />
           </div>
         )}
 

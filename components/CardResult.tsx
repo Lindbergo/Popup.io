@@ -8,6 +8,7 @@ import { generatePDF } from "@/lib/pdf-template";
 interface CardResultProps {
   design: CardDesign;
   photos?: Map<string, string>;
+  preview?: React.ReactNode;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -16,16 +17,20 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   advanced: "bg-red-100 text-red-700",
 };
 
-const TABS = [
-  { id: "guide", label: "Step-by-Step Guide" },
+const BASE_TABS = [
+  { id: "guide",    label: "Step-by-Step Guide" },
   { id: "materials", label: "Materials" },
-  { id: "template", label: "Print Template" },
+  { id: "template",  label: "Print Template" },
 ] as const;
 
-type Tab = (typeof TABS)[number]["id"];
+type BaseTab = (typeof BASE_TABS)[number]["id"];
+type Tab = BaseTab | "preview";
 
-export default function CardResult({ design, photos }: CardResultProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("guide");
+export default function CardResult({ design, photos, preview }: CardResultProps) {
+  const [activeTab, setActiveTab] = useState<Tab>(preview ? "preview" : "guide");
+  const tabs = preview
+    ? [{ id: "preview" as Tab, label: "Preview" }, ...BASE_TABS]
+    : [...BASE_TABS];
   const [exportingPDF, setExportingPDF] = useState(false);
 
   const svgString = useMemo(() => generateSVG(design, photos), [design, photos]);
@@ -165,7 +170,7 @@ export default function CardResult({ design, photos }: CardResultProps) {
       {/* Tabs */}
       <div>
         <div className="flex border-b border-gray-200 overflow-x-auto">
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -179,6 +184,18 @@ export default function CardResult({ design, photos }: CardResultProps) {
             </button>
           ))}
         </div>
+
+        {/* Scene preview */}
+        {activeTab === "preview" && preview && (
+          <div className="mt-4">
+            <div className="rounded-xl border border-gray-100 bg-white py-6 overflow-hidden">
+              {preview}
+            </div>
+            <p className="mt-3 text-xs text-center text-gray-400">
+              Approximate view of the assembled card — actual proportions depend on paper thickness and fold accuracy.
+            </p>
+          </div>
+        )}
 
         {/* Step-by-Step Guide */}
         {activeTab === "guide" && (

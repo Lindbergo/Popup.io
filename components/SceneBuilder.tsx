@@ -4,9 +4,19 @@ import { useState, useRef } from "react";
 import { SCENES } from "@/lib/scenes";
 import type { Scene, SceneParams } from "@/lib/scenes";
 import type { CardDesign } from "@/types/card";
+import BirthdayTablePreview from "@/components/BirthdayTablePreview";
+import type { BirthdayTableParams } from "@/lib/scenes/birthday-table";
 
 interface SceneBuilderProps {
-  onBuild: (design: CardDesign, photos: Map<string, string>) => void;
+  onBuild: (design: CardDesign, photos: Map<string, string>, preview: React.ReactNode) => void;
+}
+
+// Map scene id → preview renderer (add entries here when new scenes are added)
+function renderScenePreview(sceneId: string, params: SceneParams, photos: Map<string, string>): React.ReactNode {
+  if (sceneId === "birthday-table") {
+    return <BirthdayTablePreview params={params as BirthdayTableParams} photos={photos} />;
+  }
+  return null;
 }
 
 export default function SceneBuilder({ onBuild }: SceneBuilderProps) {
@@ -45,8 +55,9 @@ export default function SceneBuilder({ onBuild }: SceneBuilderProps) {
 
   function handleBuild() {
     if (!selectedScene) return;
-    const design = selectedScene.generate(params);
-    onBuild(design, photos);
+    const design  = selectedScene.generate(params);
+    const preview = renderScenePreview(selectedScene.id, params, photos);
+    onBuild(design, photos, preview);
   }
 
   if (!selectedScene) {
@@ -193,6 +204,14 @@ export default function SceneBuilder({ onBuild }: SceneBuilderProps) {
           </div>
         </div>
       )}
+
+      {/* Live scene preview */}
+      <div className="mb-5">
+        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Preview</div>
+        <div className="rounded-xl border border-gray-100 bg-white py-4 overflow-hidden">
+          {renderScenePreview(selectedScene.id, params, photos)}
+        </div>
+      </div>
 
       <button
         onClick={handleBuild}
